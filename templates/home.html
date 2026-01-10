@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- Adding flexbox properties for display-->
+    <style>
+        #container{
+            display:flex;
+            aspect-ratio: auto;
+            background-color: pink;
+            justify-content: space-evenly;
+            align-items: center;
+            height: 110px;
+
+        }
+        .child{
+            background-color: burlywood;
+            align-items: flex-start;
+            justify-content: center;
+            aspect-ratio: auto;
+            padding: 50px;
+            border: 5px solid #ccc;
+            border-radius: 8px;
+
+        }
+
+    </style>
+  </head>
+  <body>
+ <h1>Books in Library</h1>
+    <div id="container">
+  <!-- Flash messages for deletion -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <ul>
+           {% for category, message in messages %}
+            <li>
+            {% if category == 'error' %}
+            <span style="color:red; font-weight:bold;">{{ message }}</span>
+            {% else %}
+            <span style="color:green; font-weight:bold;">{{ message }}</span>
+            {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {% endwith %}
+
+
+        <!-- Search button -->
+    <form method="get" action="/home">
+        <input type="text" name="q" placeholder="Search by title or author">
+        <button type="submit">Search</button>
+    </form>
+
+    <!-- Sorting buttons -->
+
+    <a href="/home?sort=title"><button>Sort by Title</button></a>
+    <a href="/home?sort=author"><button>Sort by Author</button></a>
+
+  </div>
+ <div class="child">
+        {% if books %}
+  {% for book in books %}
+    <div class="child">
+     <h3>{{ book.title }}</h3>
+    <p>ISBN: {{ book.isbn or 'N/A' }}</p>
+    <p>Year: {{ book.year or 'N/A' }}</p>
+    <p>Author: {{ book.author_name or 'Unknown' }}</p>
+
+    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST">
+      <button type="submit">Delete</button>
+    </form>
+
+    {% if book.cover_url %}
+      <img src="{{ book.cover_url }}" alt="Cover for {{ book.title }}">
+    {% else %}
+      <img src="/images/placeholder.png" alt="No Cover Available">
+    {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>No books found.</p>
+    {% endif %}
+  </div>
+  </body>
+</html>
