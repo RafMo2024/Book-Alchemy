@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <!-- Adding flexbox properties for display-->
     <style>
         #container{
             display:flex;
@@ -31,9 +30,7 @@
   <body>
  <h1>Books in Library</h1>
     <div id="container">
-  <!-- Flash messages for deletion -->
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         <ul>
            {% for category, message in messages %}
@@ -50,16 +47,16 @@
     {% endwith %}
 
 
-        <!-- Search button -->
-    <form method="get" action="/home">
+        <form method="get" action="/home">
         <input type="text" name="q" placeholder="Search by title or author">
         <button type="submit">Search</button>
     </form>
 
-    <!-- Sorting buttons -->
-
     <a href="/home?sort=title"><button>Sort by Title</button></a>
     <a href="/home?sort=author"><button>Sort by Author</button></a>
+
+    <a href="{{ url_for('add_author') }}"><button>Add Author</button></a>
+    <a href="{{ url_for('add_book') }}"><button>Add Book</button></a>
 
   </div>
  <div class="child">
