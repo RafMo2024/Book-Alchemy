@@ -5,6 +5,10 @@ db = SQLAlchemy()
 
 # Defining class Author that inherits from db.Model
 class Author(db.Model):
+    """
+    Represents an author in the library system.
+    Attributes include name, birth date, and optional date of death.
+    """
     __tablename__ = 'authors'
 
     author_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -25,6 +29,10 @@ class Author(db.Model):
 
 # Defining class Books
 class Book(db.Model):
+    """
+    Represents a book in the library system.
+    Contains details like ISBN, title, year, and associated author.
+    """
     __tablename__ = 'books'
 
     book_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
