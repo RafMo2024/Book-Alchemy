@@ -2,21 +2,25 @@ from flask import Flask, request, render_template, redirect, url_for, flash
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+from datetime import datetime, date
 
 from data_models import db, Author, Book
-from datetime import datetime
-
 import os
+
 app = Flask(__name__)
 
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-only')
-# To display flash messages in production, NEVER hardcode secret keys. Use environment variables.
-# For learning, this is acceptable, but important to know for real applications.
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(basedir, 'data/library.sqlite')}"
 
 db.init_app(app)
+
+
+@app.route('/')
+def index():
+    """Redirects the root URL to the home page to avoid 404 errors."""
+    return redirect(url_for('home'))
 
 
 @app.route('/add_author', methods=['GET', 'POST'])
@@ -27,32 +31,46 @@ def add_author():
         birth_date_str = request.form.get("birthdate")
         date_of_death_str = request.form.get("date_of_death")  # optional
 
-        # checking for validation
+        # Validation: Required fields
         if not author_name or not birth_date_str:
             return render_template("add_author.html", message="Invalid author data. Name and birthdate required.")
 
+        # Validation: Check if author already exists
+        if Author.query.filter_by(author_name=author_name).first():
+            return render_template("add_author.html", message=f"Author '{author_name}' already exists.")
+
         # Convert string to date object
-        # Validate user input on the server side, never trust only client-side validation.
         try:
             birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
         except ValueError:
             return render_template("add_author.html", message="Invalid date format")
 
+        # Validation: Birth date cannot be in the future
+        if birth_date > date.today():
+             return render_template("add_author.html", message="Birth date cannot be in the future.")
 
-        # As date_of_death is optional so need to take care of case when user don't enter it
+        # Handle date_of_death
         if date_of_death_str:
-            date_of_death = datetime.strptime(date_of_death_str, "%Y-%m-%d").date()
+            try:
+                date_of_death = datetime.strptime(date_of_death_str, "%Y-%m-%d").date()
+                # Validation: Death date logic
+                if date_of_death < birth_date:
+                    return render_template("add_author.html", message="Date of death cannot be before birth date.")
+                if date_of_death > date.today():
+                    return render_template("add_author.html", message="Date of death cannot be in the future.")
+            except ValueError:
+                return render_template("add_author.html", message="Invalid death date format")
         else:
             date_of_death = None
 
-        # Creating an author object from the new_author dictionary
+        # Creating an author object
         author = Author(
             author_name=author_name,
             birth_date=birth_date,
-            date_of_death= date_of_death
+            date_of_death=date_of_death
         )
 
-        # Adding and commiting to the database session with error handling if database commit fails
+        # Adding and commiting to the database
         db.session.add(author)
         try:
             db.session.commit()
@@ -72,29 +90,31 @@ def add_book():
         title = request.form.get("title")
         isbn = request.form.get("isbn")
 
-        # Handling errors, if the optional parameters not provided
-        publication_year = request.form.get("publication_year")  or None
+        publication_year = request.form.get("publication_year") or None
         author_name = request.form.get("author_name") or None
 
-        # Checking for validation
+        # Validation: Check required fields
         if not title or not isbn:
             return render_template("add_book.html", message="Invalid book data. Title and isbn required.")
 
-        # Linking the author's name with author_id to enter foreign key in the book table
+        # Validation: Check if book with this ISBN already exists
+        if Book.query.filter_by(isbn=isbn).first():
+             return render_template("add_book.html", message=f"A book with ISBN {isbn} already exists.")
+
+        # Linking the author
         author = Author.query.filter_by(author_name=author_name).first()
 
         if not author:
             return f"Author '{author_name}' not found in the Database. Please add the author first.", 400
 
-        # Creating a book object from the new_book dictionary
+        # Creating a book object
         book = Book(
-            book_title = title,
-            isbn = isbn,
-            publication_year = publication_year,
-            author_id = author.author_id
+            book_title=title,
+            isbn=isbn,
+            publication_year=publication_year,
+            author_id=author.author_id
         )
 
-        # Adding and commiting to the database session with error handling if database commit fails
         db.session.add(book)
         try:
             db.session.commit()
@@ -102,7 +122,7 @@ def add_book():
             db.session.rollback()
             return render_template("add_book.html", message="Database error")
 
-        return render_template("add_book.html", message="Book '{book.book_title}' added successfully!")
+        return render_template("add_book.html", message=f"Book '{book.book_title}' added successfully!")
 
     return render_template('add_book.html')
 
@@ -119,12 +139,17 @@ def get_cover_url(isbn, size="M"):
 
 @app.route('/home')
 def home():
-    sort_by = request.args.get("sort")  # Reading the sort parameter from HTML file
+    """
+    Renders the home page displaying all books.
+    Supports searching by query parameter 'q' and sorting by 'sort' parameter (title or author).
+    """
+    sort_by = request.args.get("sort")
+    search_term = request.args.get("q")
 
+    # Base query with joined load for performance
     query = Book.query.options(joinedload(Book.author))
 
     # Search functionality
-    search_term = request.args.get("q")
     if search_term:
         books = query.join(Author).filter(
             or_(
@@ -132,12 +157,7 @@ def home():
                 Author.author_name.ilike(f"%{search_term}%")
             )
         ).all()
-    # Filtering the query but never calling .all() to execute it! This returns a Query object, not a list of books,
-    # which will cause errors later when you try to iterate.
-
-    # Query to get all books from the database based on sort or not options, now query here is updated to the
-    # Book.query.options(joinedload(Book.author)) to reduce functional and computational complexities
-
+    # Sorting functionality
     elif sort_by == "title":
         books = query.order_by(Book.book_title).all()
     elif sort_by == "author":
@@ -145,7 +165,7 @@ def home():
     else:
         books = query.all()
 
-    # Attach cover URLs
+    # Prepare data for template
     books_with_covers = []
     for book in books:
         books_with_covers.append({
@@ -159,49 +179,47 @@ def home():
 
     return render_template('home.html', books=books_with_covers)
 
-@app.route('/book/<int:book_id>/delete', methods = ['POST', 'DELETE'])
-def delete_book(book_id):
-    """This function deletes a particular book based on it's ID and if the author doesn't
-    have any other book, delete the author too from the author table"""
 
+@app.route('/book/<int:book_id>/delete', methods=['POST', 'DELETE'])
+def delete_book(book_id):
+    """
+    Deletes a specific book based on its ID.
+    If the author has no other books left, the author is also deleted.
+    """
     book = Book.query.get(book_id)
 
     if not book:
-        flash("Book '{book.book_title}' does not exist in the database.", "error")
+        flash(f"Book with ID {book_id} does not exist.", "error")
         return redirect(url_for("home"))
 
-    # Getting the author before deleting the book
+    # Prepare data for message before deletion
+    book_title = book.book_title
     author = book.author
 
-    # Deleting the book and commiting to the database session with error handling if database commit fails
     db.session.delete(book)
     try:
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        flash("Database error", "error")
+        flash("Database error during book deletion", "error")
         return redirect(url_for("home"))
 
-    # Checking whether the author still has any books,if not then deleting the author too.
+    # Check if author has other books
     if not author.books:
+        author_name = author.author_name
         db.session.delete(author)
         try:
             db.session.commit()
+            flash(f"Book '{book_title}' and its author '{author_name}' deleted successfully.", "success")
         except SQLAlchemyError:
             db.session.rollback()
-            flash("Database error", "error")
+            flash("Database error during author deletion", "error")
             return redirect(url_for("home"))
-
-        flash(f"Book '{book.book_title}' and its author '{author.author_name}' deleted successfully.", "success")
     else:
-        flash("Book '{book.book_title}' deleted successfully.", "success")
+        flash(f"Book '{book_title}' deleted successfully.", "success")
 
     return redirect(url_for("home"))
 
-
-# Creating the tables with SQLAlchemy, only needed to run once, then can be commented out
-"""with app.app_context():
-  db.create_all()"""
 
 if __name__ == "__main__":
     app.run(debug=True)
