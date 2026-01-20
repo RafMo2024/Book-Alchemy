@@ -1,43 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-          <!-- Adding flexbox properties for display-->
-    <style>
-        .container{
-            display:flex;
-            aspect-ratio: auto ;
-            background-color: olive;
-            justify-content: center;
-            align-items: flex-start;
+{% extends "base.html" %}
 
-        }
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card mt-4">
+            <div class="card-header bg-white">
+                <h3 class="mb-0">Neues Buch hinzufügen</h3>
+            </div>
+            <div class="card-body">
+                {% if message %}
+                    <div class="alert alert-info">{{ message }}</div>
+                {% endif %}
 
-
-    </style>
-  </head>
-  <body>
-  <div class="container">
-  <form action="/add_book" method="POST">
-  <!-- Add the form here -->
-  <label for="title">Book Title : </label>
-  <input type="text" id="title" name="title" required><br><br>
-
-  <label for="isbn">ISBN : </label>
-  <input type="text" id="isbn" name="isbn" required><br><br>
-  <label for="publication_year">Publication Year : </label>
-  <input type="number" id="publication_year" name="publication_year"><br><br>
-   <label for="author_name">Author's Name : </label>
-  <input type="text" id="author_name" name="author_name"><br><br>
-  <input type="submit" value="Add Book">
-  </form>
-
-  <!-- displaying the success msg -->
-  {% if message %}
-      <p style="color: purple;">{{ message }}</p>
-    {% endif %}
-  </div>
-  </body>
-</html>
+                <form action="{{ url_for('add_book') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Buchtitel</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="isbn" class="form-label">ISBN</label>
+                        <input type="text" class="form-control" id="isbn" name="isbn" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="publication_year" class="form-label">Erscheinungsjahr</label>
+                        <input type="number" class="form-control" id="publication_year" name="publication_year">
+                    </div>
+                    <div class="mb-3">
+                        <label for="author_name" class="form-label">Name des Autors</label>
+                        <input type="text" class="form-control" id="author_name" name="author_name" placeholder="Exakter Name des Autors">
+                        <div class="form-text">Der Autor muss bereits in der Datenbank existieren.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <input type="submit" class="btn btn-success" value="Buch speichern">
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">Zurück</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

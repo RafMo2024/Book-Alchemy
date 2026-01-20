@@ -7,6 +7,7 @@ from datetime import datetime, date
 from data_models import db, Author, Book
 import os
 
+
 app = Flask(__name__)
 
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-only')

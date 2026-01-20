@@ -1,87 +1,55 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <style>
-        #container{
-            display:flex;
-            aspect-ratio: auto;
-            background-color: pink;
-            justify-content: space-evenly;
-            align-items: center;
-            height: 110px;
+{% extends "base.html" %}
 
-        }
-        .child{
-            background-color: burlywood;
-            align-items: flex-start;
-            justify-content: center;
-            aspect-ratio: auto;
-            padding: 50px;
-            border: 5px solid #ccc;
-            border-radius: 8px;
-
-        }
-
-    </style>
-  </head>
-  <body>
- <h1>Books in Library</h1>
-    <div id="container">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <ul>
-           {% for category, message in messages %}
-            <li>
-            {% if category == 'error' %}
-            <span style="color:red; font-weight:bold;">{{ message }}</span>
-            {% else %}
-            <span style="color:green; font-weight:bold;">{{ message }}</span>
-            {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-    {% endwith %}
-
-
-        <form method="get" action="/home">
-        <input type="text" name="q" placeholder="Search by title or author">
-        <button type="submit">Search</button>
-    </form>
-
-    <a href="/home?sort=title"><button>Sort by Title</button></a>
-    <a href="/home?sort=author"><button>Sort by Author</button></a>
-
-    <a href="{{ url_for('add_author') }}"><button>Add Author</button></a>
-    <a href="{{ url_for('add_book') }}"><button>Add Book</button></a>
-
-  </div>
- <div class="child">
-        {% if books %}
-  {% for book in books %}
-    <div class="child">
-     <h3>{{ book.title }}</h3>
-    <p>ISBN: {{ book.isbn or 'N/A' }}</p>
-    <p>Year: {{ book.year or 'N/A' }}</p>
-    <p>Author: {{ book.author_name or 'Unknown' }}</p>
-
-    <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST">
-      <button type="submit">Delete</button>
-    </form>
-
-    {% if book.cover_url %}
-      <img src="{{ book.cover_url }}" alt="Cover for {{ book.title }}">
-    {% else %}
-      <img src="/images/placeholder.png" alt="No Cover Available">
-    {% endif %}
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h1>Meine Bibliothek</h1>
     </div>
-    {% endfor %}
+    <div class="col-md-6 text-end">
+        <form action="{{ url_for('home') }}" method="get" class="d-inline-flex gap-2">
+            <input class="form-control" type="text" name="q" placeholder="Suchen..." value="{{ request.args.get('q', '') }}">
+            <button class="btn btn-outline-primary" type="submit">🔍</button>
+        </form>
+        <div class="btn-group ms-2">
+            <a href="{{ url_for('home', sort='title') }}" class="btn btn-light border">Sort Title</a>
+            <a href="{{ url_for('home', sort='author') }}" class="btn btn-light border">Sort Author</a>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% if books %}
+        {% for book in books %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="row g-0">
+                    <div class="col-4 d-flex align-items-center justify-content-center bg-light">
+                        {% if book.cover_url %}
+                            <img src="{{ book.cover_url }}" class="img-fluid rounded-start p-2" alt="Cover">
+                        {% else %}
+                            <span style="font-size: 3rem;">📖</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-8">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ book.title }}</h5>
+                            <p class="card-text text-muted mb-1"><small>by {{ book.author_name }}</small></p>
+                            <p class="card-text mb-2"><small>Jahr: {{ book.year or 'N/A' }} | ISBN: {{ book.isbn }}</small></p>
+                            
+                            <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" onsubmit="return confirm('Wirklich löschen?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     {% else %}
-    <p>No books found.</p>
+        <div class="col-12 text-center mt-5">
+            <p class="lead text-muted">Keine Bücher gefunden. Füge welche hinzu!</p>
+            <a href="{{ url_for('add_book') }}" class="btn btn-primary btn-lg">Buch hinzufügen</a>
+        </div>
     {% endif %}
-  </div>
-  </body>
-</html>
+</div>
+{% endblock %}
